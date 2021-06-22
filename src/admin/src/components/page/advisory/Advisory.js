@@ -440,7 +440,7 @@ export default function Advisory({
           }));
           setUrgencies([...urgencies]);
           const advisoryStatusData = res[10];
-          const restrictedAdvisoryStatusCodes = ["ACT", "INA", "APR"];
+          const restrictedAdvisoryStatusCodes = ["INA", "APR"];
           const tempAdvisoryStatuses = advisoryStatusData.map((s) => {
             let result = null;
             if (restrictedAdvisoryStatusCodes.includes(s.code) && approver) {
@@ -690,7 +690,9 @@ export default function Advisory({
         selectedManagementAreas,
         selectedSites,
         selectedFireCentres,
-        selectedFireZones
+        selectedFireZones,
+        managementAreas,
+        fireZones
       );
       Promise.resolve(saveLinks()).then((savedLinks) => {
         const newAdvisory = {
@@ -774,7 +776,9 @@ export default function Advisory({
         selectedManagementAreas,
         selectedSites,
         selectedFireCentres,
-        selectedFireZones
+        selectedFireZones,
+        managementAreas,
+        fireZones
       );
       Promise.resolve(saveLinks()).then((savedLinks) => {
         const updatedLinks =
