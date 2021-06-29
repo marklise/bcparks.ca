@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Redirect, useLocation, useParams } from "react-router-dom";
+import { Redirect, useLocation, useParams, useHistory } from "react-router-dom";
 import PropTypes from "prop-types";
 import { cmsAxios } from "../../../axios_config";
 import "./AdvisorySummary.css";
@@ -19,6 +19,7 @@ import { getLinkTypes } from "../../../utils/CmsDataUtil";
 export default function AdvisorySummary({
   page: { setError, cmsData, setCmsData },
 }) {
+  const history = useHistory();
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [isPublished, setIsPublished] = useState(false);
   const [toError, setToError] = useState(false);
@@ -52,7 +53,7 @@ export default function AdvisorySummary({
             if (p.url) {
               const url = isAdvisoryPublished
                 ? p.url
-                : p.url.replace("bcparks", "test.bcparks");
+                : p.url.replace("bcparks", "wwwt.bcparks");
               return parkUrlInfo.push(
                 "<a href='" + url + "'>" + p.protectedAreaName + "</a>"
               );
@@ -69,7 +70,7 @@ export default function AdvisorySummary({
             if (s.url) {
               const url = isAdvisoryPublished
                 ? s.url
-                : s.url.replace("bcparks", "test.bcparks");
+                : s.url.replace("bcparks", "wwwt.bcparks");
               return siteUrlInfo.push(
                 "<a href='" + url + "'>" + s.siteName + "</a>"
               );
@@ -138,10 +139,6 @@ export default function AdvisorySummary({
     setSnackMessageInfo(undefined);
   };
 
-  if (toDashboard) {
-    return <Redirect to="/bcparks/advisory-dash" />;
-  }
-
   if (toUpdate) {
     return <Redirect to={`/bcparks/update-advisory/${id}`} />;
   }
@@ -175,7 +172,7 @@ export default function AdvisorySummary({
                       label="Back"
                       styling="bcgov-normal-white btn mt10"
                       onClick={() => {
-                        setToDashboard(true);
+                        history.goBack();
                       }}
                     />
                     <Button
@@ -323,7 +320,7 @@ export default function AdvisorySummary({
                               href={
                                 isPublished
                                   ? p.url
-                                  : p.url.replace("bcparks", "test.bcparks")
+                                  : p.url.replace("bcparks", "wwwt.bcparks")
                               }
                               rel="noreferrer"
                               target="_blank"
@@ -364,7 +361,7 @@ export default function AdvisorySummary({
                                 href={
                                   isPublished
                                     ? s.url
-                                    : s.url.replace("bcparks", "test.bcparks")
+                                    : s.url.replace("bcparks", "wwwt.bcparks")
                                 }
                                 rel="noreferrer"
                                 target="_blank"
@@ -525,13 +522,12 @@ export default function AdvisorySummary({
                                 target="_blank"
                                 className="ad-anchor"
                               >
-                                {
+                                {l.type &&
                                   advisory.linkTypes.filter(
                                     (t) => t.id === l.type
-                                  )[0].type
-                                }{" "}
-                                - {l.title}{" "}
-                                <LaunchIcon className="launchIcon" />
+                                  )[0].type}
+                                {l.type && " - "}
+                                {l.title} <LaunchIcon className="launchIcon" />
                               </a>
                             )}
                           </div>
