@@ -723,6 +723,12 @@
                 "activityType": {
                   "type": "string"
                 },
+                "modifiedBy": {
+                  "type": "string"
+                },
+                "modifiedDate": {
+                  "type": "string"
+                },
                 "published_at": {
                   "type": "string"
                 },
@@ -766,6 +772,12 @@
                 "facilityType": {
                   "type": "string"
                 },
+                "modifiedBy": {
+                  "type": "string"
+                },
+                "modifiedDate": {
+                  "type": "string"
+                },
                 "published_at": {
                   "type": "string"
                 },
@@ -777,6 +789,12 @@
                 }
               }
             }
+          },
+          "isUnofficialSite": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string"
           },
           "published_at": {
             "type": "string",
@@ -835,6 +853,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "isUnofficialSite": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string"
           },
           "published_at": {
             "type": "string",
