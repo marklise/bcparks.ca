@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { cmsAxios, apiAxios } from "../../../axios_config";
+import { apiAxios } from "../../../axios_config";
 import { Redirect, useParams } from "react-router-dom";
 import PropTypes from "prop-types";
 import "./Advisory.css";
@@ -140,8 +140,13 @@ export default function Advisory({
     if (mode === "update" && !isLoadingData) {
       if (parseInt(id)) {
         setAdvisoryId(id);
-        cmsAxios
-          .get(`/public-advisories/${id}?_publicationState=preview`)
+        apiAxios
+          .get(
+            `api/get/public-advisory-audits/${id}?_publicationState=preview`,
+            {
+              headers: { Authorization: `Bearer ${keycloak.idToken}` },
+            }
+          )
           .then((res) => {
             linksRef.current = [];
             const advisoryData = res.data;
@@ -359,6 +364,7 @@ export default function Advisory({
     setSelectedFireCentres,
     fireZones,
     setSelectedFireZones,
+    keycloak,
   ]);
 
   useEffect(() => {
@@ -701,7 +707,7 @@ export default function Advisory({
   };
   const saveAdvisory = (type) => {
     try {
-      const { published, status } = getAdvisoryFields(type);
+      const { status } = getAdvisoryFields(type);
       const {
         selProtectedAreas,
         selRegions,
@@ -753,12 +759,13 @@ export default function Advisory({
           isAdvisoryDateDisplayed: displayAdvisoryDate,
           isEffectiveDateDisplayed: displayStartDate,
           isEndDateDisplayed: displayEndDate,
-          published_at: published,
+          published_at: new Date(),
+          isLatestRevision: true,
           created_by: keycloak.tokenParsed.name,
         };
 
         apiAxios
-          .post(`api/add/public-advisories`, newAdvisory, {
+          .post(`api/add/public-advisory-audits`, newAdvisory, {
             headers: { Authorization: `Bearer ${keycloak.idToken}` },
           })
           .then((res) => {
@@ -788,7 +795,7 @@ export default function Advisory({
 
   const updateAdvisory = (type) => {
     try {
-      const { published, status } = getAdvisoryFields(type);
+      const { status } = getAdvisoryFields(type);
       const { updatedProtectedAreas, updatedSites } = removeLocations(
         selectedProtectedAreas,
         selectedRegions,
@@ -873,12 +880,13 @@ export default function Advisory({
             isEffectiveDateDisplayed: displayStartDate,
             isEndDateDisplayed: displayEndDate,
             isUpdatedDateDisplayed: displayUpdatedDate,
-            published_at: published,
+            published_at: new Date(),
+            isLatestRevision: true,
             updated_by: keycloak.tokenParsed.name,
           };
 
           apiAxios
-            .put(`api/update/public-advisories/${id}`, updatedAdvisory, {
+            .put(`api/update/public-advisory-audits/${id}`, updatedAdvisory, {
               headers: { Authorization: `Bearer ${keycloak.idToken}` },
             })
             .then((res) => {

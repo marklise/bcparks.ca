@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { cmsAxios } from "../../../axios_config";
+import { apiAxios } from "../../../axios_config";
 import { Redirect, useHistory } from "react-router-dom";
 import { useQuery } from "react-query";
 import PropTypes from "prop-types";
+import { useKeycloak } from "@react-keycloak/web";
 import styles from "./AdvisoryDashboard.css";
 import { Button } from "shared-components/build/components/button/Button";
 import DataTable from "../../composite/dataTable/DataTable";
@@ -32,9 +33,13 @@ export default function AdvisoryDashboard({
   page: { setError, cmsData, setCmsData },
 }) {
   const history = useHistory();
+  const { keycloak, initialized } = useKeycloak();
+  const [toError, setToError] = useState(false);
   const today = moment(new Date()).tz("America/Vancouver").toISOString();
   const [toCreate, setToCreate] = useState(false);
   const [selectedParkId, setSelectedParkId] = useState(0);
+
+  if (!keycloak && !initialized) setToError(true);
 
   const fetchPublicAdvisory = async ({ queryKey }) => {
     const [, selectedParkId] = queryKey;
@@ -42,8 +47,11 @@ export default function AdvisoryDashboard({
       selectedParkId > 0 ? `&protectedAreas.id=${selectedParkId}` : "";
     const response = await Promise.all([
       getManagementAreas(cmsData, setCmsData),
-      cmsAxios.get(
-        `/public-advisories?_limit=500&_publicationState=preview&_sort=advisoryDate:DESC${parkIdQuery}`
+      apiAxios.get(
+        `api/get/public-advisory-audits?_limit=500&_sort=advisoryDate:DESC${parkIdQuery}`,
+        {
+          headers: { Authorization: `Bearer ${keycloak.idToken}` },
+        }
       ),
     ]);
 
@@ -72,6 +80,7 @@ export default function AdvisoryDashboard({
         });
         publicAdvisory.regions = regionsWithParkCount;
       }
+
       return publicAdvisory;
     });
     return data;
@@ -330,8 +339,9 @@ export default function AdvisoryDashboard({
     return <Redirect to="/bcparks/create-advisory" />;
   }
 
-  const DEFAULT_PAGE_SIZE = 50;
-
+  if (toError) {
+    return <Redirect push to="/bcparks/error" />;
+  }
   return (
     <>
       <br />
@@ -382,10 +392,7 @@ export default function AdvisoryDashboard({
                 options={{
                   filtering: true,
                   search: false,
-                  pageSize:
-                    publicAdvisoryQuery.data.length > DEFAULT_PAGE_SIZE
-                      ? DEFAULT_PAGE_SIZE
-                      : publicAdvisoryQuery.data.length,
+                  pageSize: 50,
                   pageSizeOptions: [25, 50, 100],
                 }}
                 columns={tableColumns}
