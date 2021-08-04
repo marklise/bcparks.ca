@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { cmsAxios } from "../../../axios_config";
+import React, { useState, useEffect, useRef } from "react";
+import { cmsAxios, apiAxios } from "../../../axios_config";
 import { Redirect, useHistory } from "react-router-dom";
 import { useQuery } from "react-query";
 import PropTypes from "prop-types";
+import { useKeycloak } from "@react-keycloak/web";
 import styles from "./AdvisoryDashboard.css";
 import { Button } from "shared-components/build/components/button/Button";
 import DataTable from "../../composite/dataTable/DataTable";
@@ -20,21 +21,36 @@ import EditIcon from "@material-ui/icons/Edit";
 import InfoIcon from "@material-ui/icons/Info";
 import PublishIcon from "@material-ui/icons/Publish";
 import ThumbUpIcon from "@material-ui/icons/ThumbUp";
+import { SvgIcon } from "@material-ui/core";
 
 import WarningRoundedIcon from "@material-ui/icons/WarningRounded";
 
 import {
   getProtectedAreas,
   getManagementAreas,
+  getAdvisoryStatuses,
 } from "../../../utils/CmsDataUtil";
 
 export default function AdvisoryDashboard({
   page: { setError, cmsData, setCmsData },
 }) {
   const history = useHistory();
+  const { keycloak, initialized } = useKeycloak();
+  const [toError, setToError] = useState(false);
   const today = moment(new Date()).tz("America/Vancouver").toISOString();
   const [toCreate, setToCreate] = useState(false);
   const [selectedParkId, setSelectedParkId] = useState(0);
+  const [publishedAdvisories, setPublishedAdvisories] = useState([]);
+  const isMounted = useRef(true);
+
+  if (!keycloak && !initialized) setToError(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, [isMounted]);
 
   const fetchPublicAdvisory = async ({ queryKey }) => {
     const [, selectedParkId] = queryKey;
@@ -42,13 +58,46 @@ export default function AdvisoryDashboard({
       selectedParkId > 0 ? `&protectedAreas.id=${selectedParkId}` : "";
     const response = await Promise.all([
       getManagementAreas(cmsData, setCmsData),
-      cmsAxios.get(
-        `/public-advisories?_limit=500&_publicationState=preview&_sort=advisoryDate:DESC${parkIdQuery}`
+      apiAxios.get(
+        `api/get/public-advisory-audits?_limit=500&_sort=advisoryDate:DESC${parkIdQuery}`,
+        {
+          headers: { Authorization: `Bearer ${keycloak.idToken}` },
+        }
       ),
     ]);
 
     const managementAreas = response[0];
     const publicAdvisories = response[1].data;
+
+    const getCurrentPublishedAdvisories = (cmsData, setCmsData) => {
+      const advisoryStatuses = getAdvisoryStatuses(cmsData, setCmsData);
+      if (advisoryStatuses) {
+        const publishedStatus = advisoryStatuses.filter(
+          (as) => as.code === "PUB"
+        );
+        if (publishedStatus && publishedStatus[0]) {
+          cmsAxios
+            .get(
+              `/public-advisories?_advisoryStatus=${publishedStatus[0].id}&_limit=-1`
+            )
+            .then((res) => {
+              const result = res.data;
+              let publishedAdvisories = [];
+              result.forEach((ad) => {
+                publishedAdvisories = [
+                  ...publishedAdvisories,
+                  ad.advisoryNumber,
+                ];
+              });
+              if (isMounted.current) {
+                setPublishedAdvisories([...publishedAdvisories]);
+              }
+            });
+        }
+      }
+    };
+
+    getCurrentPublishedAdvisories(cmsData, setCmsData);
 
     const regionParksCount = managementAreas.reduce((region, item) => {
       region[item.region.id] =
@@ -72,6 +121,7 @@ export default function AdvisoryDashboard({
         });
         publicAdvisory.regions = regionsWithParkCount;
       }
+
       return publicAdvisory;
     });
     return data;
@@ -151,20 +201,58 @@ export default function AdvisoryDashboard({
           {rowData.advisoryStatus && (
             <Tooltip title={rowData.advisoryStatus.advisoryStatus}>
               <span>
-                {rowData.advisoryStatus.code === "DFT" && (
-                  <EditIcon className="draftIcon" />
+                {publishedAdvisories.includes(rowData.advisoryNumber) && (
+                  <SvgIcon>
+                    {rowData.advisoryStatus.code !== "PUB" && (
+                      <PublishIcon
+                        className="publishedIcon"
+                        viewBox="5 13 25 5"
+                      />
+                    )}
+                    {rowData.advisoryStatus.code === "DFT" && (
+                      <EditIcon className="draftIcon" viewBox="-16 -5 45 10" />
+                    )}
+                    {rowData.advisoryStatus.code === "INA" && (
+                      <WatchLaterIcon
+                        className="inactiveIcon"
+                        viewBox="-16 -5 45 10"
+                      />
+                    )}
+                    {rowData.advisoryStatus.code === "APR" && (
+                      <ThumbUpIcon
+                        className="approvedIcon"
+                        viewBox="-16 -5 45 10"
+                      />
+                    )}
+                    {rowData.advisoryStatus.code === "ARQ" && (
+                      <InfoIcon
+                        className="approvalRequestedIcon"
+                        viewBox="-16 -5 45 10"
+                      />
+                    )}
+                    {rowData.advisoryStatus.code === "PUB" && (
+                      <PublishIcon className="publishedIcon" />
+                    )}
+                  </SvgIcon>
                 )}
-                {rowData.advisoryStatus.code === "INA" && (
-                  <WatchLaterIcon className="inactiveIcon" />
-                )}
-                {rowData.advisoryStatus.code === "APR" && (
-                  <ThumbUpIcon className="approvedIcon" />
-                )}
-                {rowData.advisoryStatus.code === "ARQ" && (
-                  <InfoIcon className="approvalRequestedIcon" />
-                )}
-                {rowData.advisoryStatus.code === "PUB" && (
-                  <PublishIcon className="publishedIcon" />
+                {!publishedAdvisories.includes(rowData.advisoryNumber) && (
+                  <>
+                    {rowData.advisoryStatus.code === "DFT" && (
+                      <EditIcon className="draftIcon" />
+                    )}
+                    {rowData.advisoryStatus.code === "INA" && (
+                      <WatchLaterIcon className="inactiveIcon" />
+                    )}
+                    {rowData.advisoryStatus.code === "APR" && (
+                      <ThumbUpIcon className="approvedIcon" />
+                    )}
+                    {rowData.advisoryStatus.code === "ARQ" && (
+                      <InfoIcon className="approvalRequestedIcon" />
+                    )}
+                    {rowData.advisoryStatus.code === "PUB" && (
+                      <PublishIcon className="publishedIcon" />
+                    )}
+                  </>
                 )}
               </span>
             </Tooltip>
@@ -330,8 +418,9 @@ export default function AdvisoryDashboard({
     return <Redirect to="/bcparks/create-advisory" />;
   }
 
-  const DEFAULT_PAGE_SIZE = 50;
-
+  if (toError) {
+    return <Redirect push to="/bcparks/error" />;
+  }
   return (
     <>
       <br />
@@ -382,10 +471,7 @@ export default function AdvisoryDashboard({
                 options={{
                   filtering: true,
                   search: false,
-                  pageSize:
-                    publicAdvisoryQuery.data.length > DEFAULT_PAGE_SIZE
-                      ? DEFAULT_PAGE_SIZE
-                      : publicAdvisoryQuery.data.length,
+                  pageSize: 50,
                   pageSizeOptions: [25, 50, 100],
                 }}
                 columns={tableColumns}

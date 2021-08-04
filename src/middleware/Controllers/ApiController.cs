@@ -38,9 +38,44 @@ namespace BCParksApi.Controllers
             try
             {
                 string url = _configuration["CmsUrl"] + route;
+                var queryString = Request.QueryString;
                 if (param != "")
+                    url += "/" + param;
+
+                if (queryString.ToString() != "")
+                    url += queryString + "&";
+                 else  
+                    url += "?"; 
+                
+                url += "token=" + _configuration["ApiToken"];
+
+                string apiResponse = await ApiHelper.httpClient.GetStringAsync(url);
+                return Ok(JsonConvert.DeserializeObject<object>(apiResponse));
+            }
+            catch (HttpRequestException e)
+            {
+                _logger.LogError("Message :{0} ", e.Message);
+                return NotFound();
+            }
+        }
+
+        [HttpGet]
+        [Route("getId/{route}/{subRoute?}/{id?}")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetDataFromId(string route, string subRoute = "", string id = "")
+        {
+            try
+            {
+                string url = _configuration["CmsUrl"] + route;
+                if (subRoute != "")
                 {
-                    url += "?" + param;
+                    url += "/" + subRoute;
+                }
+                if (id != "")
+                {
+                    url += "/" + id;
                 }
                 url = url + "?token=" + _configuration["ApiToken"];
                 string apiResponse = await ApiHelper.httpClient.GetStringAsync(url);
@@ -49,7 +84,7 @@ namespace BCParksApi.Controllers
             catch (HttpRequestException e)
             {
                 _logger.LogError("Message :{0} ", e.Message);
-                return NotFound();
+                return BadRequest();
             }
         }
 

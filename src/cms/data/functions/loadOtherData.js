@@ -66,6 +66,7 @@ const loadFireBanProhibition = async () => {
     .get(WILDFIRE_BANS_PROHIBITIONS_API_ENDPOINT)
     .then(async (response) => {
       const { features } = response.data;
+      if (!features) return;
       features.forEach(async (feature) => {
         const {
           attributes: {
@@ -97,6 +98,7 @@ const loadFireBanProhibition = async () => {
           prohibitionDescription: access_prohibition_description,
           effectiveDate: access_status_effective_date,
           bulletinURL: bulletin_url,
+          fireCentreSource: fire_centre_name,
           fireCentre: fireCentre,
           fireZone: fireZone,
         };
@@ -107,6 +109,14 @@ const loadFireBanProhibition = async () => {
     .catch((error) => {
       strapi.log.error(error);
     });
+};
+
+const loadStandardMessage = async () => {
+  loadUtils.loadJson(
+    "standard-message",
+    "./data/standard-message.json",
+    "standard-message"
+  );
 };
 
 const loadUrgency = async () => {
@@ -362,6 +372,14 @@ const loadStatutoryHolidays = async () => {
   }
 };
 
+const loadWebsites = async () => {
+  loadUtils.loadJson("website", "./data/websites.json", "website");
+};
+
+const loadPages = async () => {
+  loadUtils.loadJson("page", "./data/pages.json", "page");
+};
+
 module.exports = {
   loadBusinessHours,
   loadStatutoryHolidays,
@@ -376,6 +394,7 @@ module.exports = {
   loadFireZone,
   loadFireCentreZoneXref,
   loadFireBanProhibition,
+  loadStandardMessage,
   loadUrgency,
   loadParkActivity,
   loadParkFacility,
@@ -383,4 +402,6 @@ module.exports = {
   loadParkName,
   loadParkFireZoneXref,
   loadParkFogZoneXref,
+  loadPages,
+  loadWebsites,
 };

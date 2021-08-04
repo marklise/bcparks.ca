@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { cmsAxios, apiAxios } from "../../../axios_config";
+import { apiAxios } from "../../../axios_config";
 import { Redirect, useParams } from "react-router-dom";
 import PropTypes from "prop-types";
 import "./Advisory.css";
@@ -32,6 +32,7 @@ import {
   getAdvisoryStatuses,
   getLinkTypes,
   getBusinessHours,
+  getStandardMessages,
 } from "../../../utils/CmsDataUtil";
 import { hasRole } from "../../../utils/AuthenticationUtil";
 import { labelCompare } from "../../../utils/AppUtil";
@@ -40,6 +41,10 @@ export default function Advisory({
   mode,
   page: { setError, cmsData, setCmsData },
 }) {
+  const [advisoryNumber, setAdvisoryNumber] = useState();
+  const [revisionNumber, setRevisionNumber] = useState();
+  const [standardMessages, setStandardMessages] = useState([]);
+  const [selectedStandardMessages, setSelectedStandardMessages] = useState([]);
   const [protectedAreas, setProtectedAreas] = useState([]);
   const [selectedProtectedAreas, setSelectedProtectedAreas] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -140,11 +145,18 @@ export default function Advisory({
     if (mode === "update" && !isLoadingData) {
       if (parseInt(id)) {
         setAdvisoryId(id);
-        cmsAxios
-          .get(`/public-advisories/${id}?_publicationState=preview`)
+        apiAxios
+          .get(
+            `api/get/public-advisory-audits/${id}?_publicationState=preview`,
+            {
+              headers: { Authorization: `Bearer ${keycloak.idToken}` },
+            }
+          )
           .then((res) => {
             linksRef.current = [];
             const advisoryData = res.data;
+            setAdvisoryNumber(advisoryData.advisoryNumber);
+            setRevisionNumber(advisoryData.revisionNumber);
             setHeadline(advisoryData.title || "");
             setDescription(advisoryData.description || "");
             setTicketNumber(advisoryData.dcTicketNumber || "");
@@ -159,6 +171,9 @@ export default function Advisory({
             if (advisoryData.advisoryDate) {
               setAdvisoryDate(
                 moment(advisoryData.advisoryDate).tz("America/Vancouver")
+              );
+              advisoryDateRef.current = moment(advisoryData.advisoryDate).tz(
+                "America/Vancouver"
               );
             }
             if (advisoryData.effectiveDate) {
@@ -214,6 +229,7 @@ export default function Advisory({
               setDisplayUpdatedDate(advisoryData.isUpdatedDateDisplayed);
             }
 
+            const standardMessageInfo = advisoryData.standardMessages;
             const protectedAreaInfo = advisoryData.protectedAreas;
             const regionInfo = advisoryData.regions;
             const sectionInfo = advisoryData.sections;
@@ -221,6 +237,16 @@ export default function Advisory({
             const siteInfo = advisoryData.sites;
             const fireCentreInfo = advisoryData.fireCentres;
             const fireZoneInfo = advisoryData.fireZones;
+
+            if (standardMessageInfo) {
+              const selStandardMessages = [];
+              standardMessageInfo.forEach((p) => {
+                selStandardMessages.push(
+                  standardMessages.find((l) => l.value === p.id)
+                );
+              });
+              setSelectedStandardMessages([...selStandardMessages]);
+            }
 
             if (protectedAreaInfo) {
               const selProtectedAreas = [];
@@ -345,6 +371,8 @@ export default function Advisory({
     eventTypes,
     setToError,
     setError,
+    standardMessages,
+    setSelectedStandardMessages,
     protectedAreas,
     setSelectedProtectedAreas,
     regions,
@@ -359,6 +387,7 @@ export default function Advisory({
     setSelectedFireCentres,
     fireZones,
     setSelectedFireZones,
+    keycloak,
   ]);
 
   useEffect(() => {
@@ -378,6 +407,7 @@ export default function Advisory({
         getUrgencies(cmsData, setCmsData),
         getAdvisoryStatuses(cmsData, setCmsData),
         getLinkTypes(cmsData, setCmsData),
+        getStandardMessages(cmsData, setCmsData),
       ])
         .then((res) => {
           const protectedAreaData = res[0];
@@ -489,6 +519,14 @@ export default function Advisory({
           if (linkType.length > 0) {
             setDefaultLinkType(linkType[0].value);
           }
+          const standardMessageData = res[12];
+          const standardMessages = standardMessageData.map((m) => ({
+            label: m.description,
+            value: m.id,
+            type: "standardMessage",
+            obj: m,
+          }));
+          setStandardMessages([...standardMessages]);
           if (mode === "create") {
             const defaultUrgency = urgencies.filter((u) => u.label === "Low");
             if (defaultUrgency.length > 0) {
@@ -510,6 +548,7 @@ export default function Advisory({
         });
     }
   }, [
+    setStandardMessages,
     setProtectedAreas,
     setRegions,
     setSections,
@@ -701,7 +740,7 @@ export default function Advisory({
   };
   const saveAdvisory = (type) => {
     try {
-      const { published, status } = getAdvisoryFields(type);
+      const { status } = getAdvisoryFields(type);
       const {
         selProtectedAreas,
         selRegions,
@@ -740,6 +779,7 @@ export default function Advisory({
           accessStatus: accessStatus ? accessStatus : null,
           eventType: eventType,
           urgency: urgency,
+          standardMessages: selectedStandardMessages.map((s) => s.value),
           protectedAreas: selProtectedAreas,
           advisoryStatus: status,
           links: savedLinks,
@@ -753,12 +793,13 @@ export default function Advisory({
           isAdvisoryDateDisplayed: displayAdvisoryDate,
           isEffectiveDateDisplayed: displayStartDate,
           isEndDateDisplayed: displayEndDate,
-          published_at: published,
+          published_at: new Date(),
+          isLatestRevision: true,
           created_by: keycloak.tokenParsed.name,
         };
 
         apiAxios
-          .post(`api/add/public-advisories`, newAdvisory, {
+          .post(`api/add/public-advisory-audits`, newAdvisory, {
             headers: { Authorization: `Bearer ${keycloak.idToken}` },
           })
           .then((res) => {
@@ -788,7 +829,7 @@ export default function Advisory({
 
   const updateAdvisory = (type) => {
     try {
-      const { published, status } = getAdvisoryFields(type);
+      const { status } = getAdvisoryFields(type);
       const { updatedProtectedAreas, updatedSites } = removeLocations(
         selectedProtectedAreas,
         selectedRegions,
@@ -859,6 +900,7 @@ export default function Advisory({
             accessStatus: accessStatus,
             eventType: eventType,
             urgency: urgency,
+            standardMessages: selectedStandardMessages.map((s) => s.value),
             protectedAreas: selProtectedAreas,
             advisoryStatus: status,
             links: updatedLinks,
@@ -873,12 +915,13 @@ export default function Advisory({
             isEffectiveDateDisplayed: displayStartDate,
             isEndDateDisplayed: displayEndDate,
             isUpdatedDateDisplayed: displayUpdatedDate,
-            published_at: published,
+            published_at: new Date(),
+            isLatestRevision: true,
             updated_by: keycloak.tokenParsed.name,
           };
 
           apiAxios
-            .put(`api/update/public-advisories/${id}`, updatedAdvisory, {
+            .put(`api/update/public-advisory-audits/${id}`, updatedAdvisory, {
               headers: { Authorization: `Bearer ${keycloak.idToken}` },
             })
             .then((res) => {
@@ -961,6 +1004,8 @@ export default function Advisory({
               <AdvisoryForm
                 mode={mode}
                 data={{
+                  advisoryNumber,
+                  revisionNumber,
                   ticketNumber,
                   setTicketNumber,
                   listingRank,
@@ -975,6 +1020,9 @@ export default function Advisory({
                   setAccessStatus,
                   description,
                   setDescription,
+                  standardMessages,
+                  selectedStandardMessages,
+                  setSelectedStandardMessages,
                   protectedAreas,
                   selectedProtectedAreas,
                   setSelectedProtectedAreas,
