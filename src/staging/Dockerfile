@@ -31,7 +31,6 @@ USER 1007770000
 COPY package.json ./
 RUN npm install --unsafe-perm 
 RUN npm install -g gatsby-cli
-RUN gatsby build
 
 # add bash to the image
 # RUN apk add --no-cache bash
