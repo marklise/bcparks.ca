@@ -640,6 +640,9 @@
               "precedence": {
                 "type": "integer"
               },
+              "color": {
+                "type": "string"
+              },
               "published_at": {
                 "type": "string"
               },
@@ -689,6 +692,9 @@
               },
               "sequence": {
                 "type": "integer"
+              },
+              "color": {
+                "type": "string"
               },
               "published_at": {
                 "type": "string"
@@ -852,6 +858,36 @@
                 "campfireBanRescindedDate": {
                   "type": "string"
                 },
+                "description": {
+                  "type": "string"
+                },
+                "safetyInfo": {
+                  "type": "string"
+                },
+                "specialNotes": {
+                  "type": "string"
+                },
+                "locationNotes": {
+                  "type": "string"
+                },
+                "parkContact": {
+                  "type": "string"
+                },
+                "reservations": {
+                  "type": "string"
+                },
+                "maps": {
+                  "type": "string"
+                },
+                "natureAndCulture": {
+                  "type": "string"
+                },
+                "reconciliationNotes": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
                 "published_at": {
                   "type": "string"
                 },
@@ -881,6 +917,15 @@
                   "type": "string"
                 },
                 "type": {
+                  "type": "string"
+                },
+                "file": {
+                  "type": "string"
+                },
+                "publicAdvisoryAudit": {
+                  "type": "string"
+                },
+                "publicAdvisory": {
                   "type": "string"
                 },
                 "published_at": {
