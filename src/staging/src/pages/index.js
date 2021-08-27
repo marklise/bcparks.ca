@@ -1,18 +1,16 @@
 import React from "react"
-import { css } from "@emotion/react"
-import { Link, graphql } from "gatsby"
-import { rhythm } from "../utils/typography"
-import Layout from "../components/layout"
+import { graphql } from "gatsby"
 import Header from "../components/header"
-import Menu from "../components/menu"
 import Footer from "../components/footer"
-import HTMLArea from "../components/HTMLArea"
-import Media from "../components/media"
 import Zone from "../components/zone"
+import Menu from "../components/Menu"
+import MainSearch from "../components/mainSearch"
+import "../styles/home.scss"
+import Exclamation from "../images/alert 32px.png"
 
 export const query = graphql`
   query {
-    strapiWebsites(Name: { eq: "BCParks.ca"  }) {
+    strapiWebsites(Name: { eq: "BCParks.ca" }) {
       Footer
       Header
       Name
@@ -37,45 +35,107 @@ export const query = graphql`
         Content
       }
     }
+    allStrapiActivityTypes(sort: { fields: activityName }) {
+      totalCount
+      nodes {
+        activityName
+        activityNumber
+      }
+    }
+    allStrapiFacilityTypes(sort: { fields: facilityName }) {
+      totalCount
+      nodes {
+        facilityName
+        facilityNumber
+      }
+    }
+    allStrapiProtectedArea(sort: { fields: protectedAreaName }) {
+      nodes {
+        parkActivities {
+          activityType
+          isActive
+          isActivityOpen
+          name
+        }
+        parkFacilities {
+          facilityType
+          isActive
+          isFacilityOpen
+          name
+        }
+        id
+        orcs
+        latitude
+        longitude
+        protectedAreaName
+        parkNames {
+          parkName
+          id
+          parkNameType
+        }
+        status
+        typeCode
+        marineProtectedArea
+      }
+    }
   }
 `
+const cmsUrl =  process.env.GATSBY_REACT_APP_CMS_BASE_URL
 
 export default function Home({ data }) {
+  // ID 6 === Hero Carousel
+  const zonesContent = data?.strapiWebsites?.homepage?.Content?.filter(c => c.id !== 6) || []
+  const searchCarousel = data?.strapiWebsites?.homepage?.Content?.find(c => c.id === 6) || {}
+
   return (
-    <div>
+    <div className="container-fluid px-0">
       <Header>
-        { data.strapiWebsites.Header}
+        {data.strapiWebsites.Header}
       </Header>
       <Menu>
-      { data.strapiWebsites.Navigation}
+        {data.strapiWebsites.Navigation}
       </Menu>
-      <div class="alert-banner">
-      <span>Some parks are currently affected by wildfire activity. More details. </span>
+      <AdvisoryBar />
+      <div className="park-search">
+        <MainSearch
+            data={{
+              activities: data.allStrapiActivityTypes.nodes,
+              facilities: data.allStrapiFacilityTypes.nodes,
+              protectedAreas: data.allStrapiProtectedArea.nodes,
+            }}
+          />
+        <div className="park-search-carousel">
+          <Zone key={6} Content={searchCarousel}  />
+          <div className="col-12 d-none d-sm-block text-center text-white" id="carousel-down"><i className="fa fa-chevron-down"></i></div>
+        </div>
       </div>
-      <div class="park-search">
-      <img src="http://localhost:1337/uploads/ID_4_3984_Valhalla_DBC_44ff0c4d8e.png" />
-      <div><span id="search-title">Welcome to BC Parks</span>
-      <span>Plan your next adventure by searching for campsites and day-use areas around B.C.</span>
-      <span>
-        <input type="search" id="park-search-box" name="park-search-box" value="Search by park name, location, activity …"></input>
-        <svg class="search-icon-center-main">
-          <ellipse id="search-icon-center-main" rx="34.5" ry="34.5" cx="34.5" cy="34.5">
-          </ellipse>
-		    </svg>
-      </span>
-     
-      </div>
-      </div>
-      <div id='main'>      
-          <Zone zoneID='Zone1' Content={data.strapiWebsites.homepage.Content[0]} />
-          <Zone zoneID='Zone2' Content={data.strapiWebsites.homepage.Content[1]} />
-          <Zone zoneID='Zone3' Content={data.strapiWebsites.homepage.Content[2]} />
-          <Zone zoneID='Zone4' Content={data.strapiWebsites.homepage.Content[3]} />
-          <Zone zoneID='Zone5' Content={data.strapiWebsites.homepage.Content[4]} />
+      <div id="main">
+        {zonesContent.map(content => <Zone key={content.id} zoneID={`Zone${content.id}`} Content={content} />)}
       </div>
       <Footer>
-        { data.strapiWebsites.Footer}
+        {data.strapiWebsites.Footer}
       </Footer>
     </div>
   )
-        }
+}
+
+function AdvisoryBar() {
+  return (
+    <>
+      <div className="alert alert-warning alert-dismissable rounded-0 d-block d-sm-none" role="alert" id="home-alert">
+        <button type="button" className="close" data-dismiss="alert">×</button>
+        <div className="row">
+          <div className="col-1 pl-0"><img className="alert-exclamation" src={Exclamation} alt="exclamation" /></div>
+          <div className="col-11 align-self-center"><span className="text-center">Some parks are currently affected by wildfire activity. <a href="#" className="d-inline-flex underline">See all advisories</a>.</span></div>
+        </div>
+      </div>
+      <div className="alert alert-warning alert-dismissable rounded-0 d-none d-sm-block" role="alert" id="home-alert">
+        <button type="button" className="close" data-dismiss="alert">×</button>
+        <span className="text-center">
+          <img className="alert-exclamation d-inline-flex pr-4" src={Exclamation} alt="exclamation" />
+          Some parks are currently affected by wildfire activity. <a href="#" className="d-inline-flex underline">See all advisories</a>.
+        </span>
+      </div>
+    </>
+  )
+}
